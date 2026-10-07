@@ -88,7 +88,7 @@ export default {
 					const params = new URLSearchParams(url.search);
 					params.set('token', await MD5MD5(host + userID));
 					return new Response('重定向中...', { status: 302, headers: { 'Location': `/sub?${params.toString()}` } });
-				} else if (访问路径 === 'login') {//处理登录页面和登录请求
+				} else if (访问路径 === '' || 访问路径 === 'login') {//处理登录页面和登录请求
 					const cookies = request.headers.get('Cookie') || '';
 					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
 					if (authCookie == await MD5MD5(UA + 加密秘钥 + 管理员密码)) return new Response('重定向中...', { status: 302, headers: { 'Location': '/admin' } });
@@ -103,7 +103,16 @@ export default {
 							return 响应;
 						}
 					}
-					return fetch(Pages静态页面 + '/login');
+					const 登录响应 = await fetch(Pages静态页面 + '/login');
+					let 登录HTML = await 登录响应.text();
+					登录HTML = 登录HTML
+						.replace(/<form id="loginForm" class="page-form">/g, '<form id="loginForm" class="page-form" method="POST" action="/login">\n\t\t\t\t<input type="text" name="username" value="admin" autocomplete="username" style="display:none">')
+						.replace(/<input type="password" id="password" name="password" class="with-icon" placeholder="请输入您的管理员密码"\s+required disabled>/g, '<input type="password" id="password" name="password" class="with-icon" placeholder="请输入您的管理员密码" required autocomplete="current-password">')
+						.replace(/<button type="submit" class="btn btn-primary btn-full-width" id="loginBtn" disabled>/g, '<button type="submit" class="btn btn-primary btn-full-width" id="loginBtn">');
+					const 响应头 = new Headers(登录响应.headers);
+					响应头.delete('content-length');
+					响应头.delete('content-encoding');
+					return new Response(登录HTML, { status: 登录响应.status, headers: 响应头 });
 				} else if (访问路径 === 'admin' || 访问路径.startsWith('admin/')) {//验证cookie后响应管理页面
 					const cookies = request.headers.get('Cookie') || '';
 					const authCookie = cookies.split(';').find(c => c.trim().startsWith('auth='))?.split('=')[1];
@@ -3329,9 +3338,9 @@ async function httpsConnect(targetHost, targetPort, initialData, TCP连接, pars
 
 function 创建请求TCP连接器(request) {
 	const 请求对象 = /** @type {any} */ (request);
-	const fetcher = 请求对象?.fetcher;
-	if (!fetcher || typeof fetcher.connect !== 'function') throw new Error('request.fetcher.connect unavailable');
-	return (options, init) => init === undefined ? fetcher.connect(options) : fetcher.connect(options, init);
+	const connectFn = 请求对象?.fetcher?.connect || 请求对象?.cf?.connect || (typeof connect === 'function' ? connect : null);
+	if (typeof connectFn !== 'function') throw new Error('TCP socket connect function unavailable');
+	return (options, init) => init === undefined ? connectFn(options) : connectFn(options, init);
 }
 ////////////////////////////////////////////TLSClient by: @Alexandre_Kojeve////////////////////////////////////////////////
 const TLS_VERSION_10 = 769, TLS_VERSION_12 = 771, TLS_VERSION_13 = 772;
