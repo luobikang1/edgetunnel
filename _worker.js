@@ -3338,9 +3338,9 @@ async function httpsConnect(targetHost, targetPort, initialData, TCP连接, pars
 
 function 创建请求TCP连接器(request) {
 	const 请求对象 = /** @type {any} */ (request);
-	const fetcher = 请求对象?.fetcher;
-	if (!fetcher || typeof fetcher.connect !== 'function') throw new Error('request.fetcher.connect unavailable');
-	return (options, init) => init === undefined ? fetcher.connect(options) : fetcher.connect(options, init);
+	const connectFn = 请求对象?.fetcher?.connect || 请求对象?.cf?.connect || (typeof connect === 'function' ? connect : null);
+	if (typeof connectFn !== 'function') throw new Error('TCP socket connect function unavailable');
+	return (options, init) => init === undefined ? connectFn(options) : connectFn(options, init);
 }
 ////////////////////////////////////////////TLSClient by: @Alexandre_Kojeve////////////////////////////////////////////////
 const TLS_VERSION_10 = 769, TLS_VERSION_12 = 771, TLS_VERSION_13 = 772;
